@@ -3,6 +3,9 @@ package main
 import (
 	"flag"
 	"log"
+
+	"senorpedro.com/sqlite-browser/db"
+	"senorpedro.com/sqlite-browser/tui"
 )
 
 var (
@@ -16,8 +19,8 @@ func main() {
 		log.Fatalf("Err: You need to provide the path to a sqlite db file with --db")
 	}
 
-	s := SqliteReader{fileName: *file}
-	s.open()
-	s.printTables()
+	s := db.SqliteReader{}
+	s.Open(*file)
 
+	tui.StartUI(&s)
 }
