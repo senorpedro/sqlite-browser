@@ -5,12 +5,14 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"senorpedro.com/sqlite-browser/db"
 )
 
 type Tui struct {
-	SqliteReader *db.SqliteReader
-	tableBrowser TableBrowser
+	SqliteReader     *db.SqliteReader
+	tablesListView   TablesListView
+	tableContentView TableContentView
 }
 
 func (t Tui) Init() tea.Cmd {
@@ -39,7 +41,7 @@ func (t Tui) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			*/
 		default:
-			t.tableBrowser, cmd = t.tableBrowser.Update(msg)
+			t.tablesListView, cmd = t.tablesListView.Update(msg)
 		}
 	}
 
@@ -47,31 +49,42 @@ func (t Tui) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (t Tui) View() string {
-	tableBrowserView := t.tableBrowser.View()
-	//contentListView := m.contentList.View()
+	tablesListView := t.tablesListView.View()
+	tableContentView := t.tableContentView.View()
 
 	// Style the two panes
-	// leftPane := lipgloss.NewStyle().Width(30).Height(100).Render(tableBrowserView)
-	// rightPane := lipgloss.NewStyle().Width(70).Height(100).Render(contentListView)
+	leftPane := lipgloss.NewStyle().Render(tablesListView)
+	// leftPane := lipgloss.NewStyle().Width(30).Height(100).Render(tablesListView)
+	rightPane := lipgloss.NewStyle().Render(tableContentView)
 
 	// Combine the panes horizontally
-	// view := lipgloss.JoinHorizontal(lipgloss.Top, leftPane, rightPane)
+	view := lipgloss.JoinHorizontal(lipgloss.Top, leftPane, rightPane)
 
-	return tableBrowserView
+	return view
 }
 
 func StartUI(s *db.SqliteReader) {
 
 	tui := Tui{SqliteReader: s}
 
-	tables := tui.SqliteReader.TableNames()
+	tableNames := tui.SqliteReader.TableNames()
 
 	// init ui
-	tb := CreateTableBrowser(tables)
+	tlv := CreateTablesListView(tableNames)
+	tui.tablesListView = tlv
 
-	tui.tableBrowser = tb
+	header := []string{"Name", "Age", "Gender"}
+	data := [][]string{
+		{"Alice", "25", "Female"},
+		{"Bob", "30", "Male"},
+		{"Charlie", "40", "Male"},
+		{"Diana", "35", "Female"},
+	}
 
-	if _, err := tea.NewProgram(tui).Run(); err != nil {
+	tcv := CreateTablesContentView(header, data)
+	tui.tableContentView = tcv
+
+	if _, err := tea.NewProgram(tui, tea.WithAltScreen()).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
