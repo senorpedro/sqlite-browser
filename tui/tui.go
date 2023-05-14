@@ -27,6 +27,15 @@ func (t Tui) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return t, tea.Quit
+		case "tab":
+			// switch focus to other pane
+			if t.tableContentView.Active {
+				t.tableContentView.Active = false
+				t.tablesListView.Active = true
+			} else {
+				t.tableContentView.Active = true
+				t.tablesListView.Active = false
+			}
 		case "enter":
 			// Load file contents into the contentList
 			/*
@@ -48,6 +57,10 @@ func (t Tui) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return t, cmd
 }
 
+func help() string {
+	return Styles.Help(fmt.Sprintf("\ntab: focus next • q: exit\n"))
+}
+
 func (t Tui) View() string {
 	tablesListView := t.tablesListView.View()
 	tableContentView := t.tableContentView.View()
@@ -60,6 +73,8 @@ func (t Tui) View() string {
 	// Combine the panes horizontally
 	view := lipgloss.JoinHorizontal(lipgloss.Top, leftPane, rightPane)
 
+	view += help()
+
 	return view
 }
 
@@ -71,8 +86,10 @@ func StartUI(s *db.SqliteReader) {
 
 	// init ui
 	tlv := CreateTablesListView(tableNames)
+	tlv.Active = true
 	tui.tablesListView = tlv
 
+	// TODO replace with real data
 	header := []string{"Name", "Age", "Gender"}
 	data := [][]string{
 		{"Alice", "25", "Female"},
@@ -82,18 +99,12 @@ func StartUI(s *db.SqliteReader) {
 	}
 
 	tcv := CreateTablesContentView(header, data)
+	tcv.Active = false
 	tui.tableContentView = tcv
 
 	if _, err := tea.NewProgram(tui, tea.WithAltScreen()).Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
-
-	/*
-		if _, err := tea.NewProgram(tui.tableBrowser).Run(); err != nil {
-			fmt.Println("Error running program:", err)
-			os.Exit(1)
-		}
-	*/
 
 }

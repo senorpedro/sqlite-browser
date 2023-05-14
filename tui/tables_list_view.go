@@ -50,7 +50,8 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, currentListIt
 }
 
 type TablesListView struct { // bubbletea model
-	list list.Model
+	list   list.Model
+	Active bool
 }
 
 func CreateTablesListView(tableNames []string) TablesListView {
@@ -66,6 +67,7 @@ func CreateTablesListView(tableNames []string) TablesListView {
 	listHeight := 14
 
 	list := list.NewModel(tableItems, itemDelegate{}, defaultWidth, listHeight)
+	list.SetShowHelp(false)
 	list.Title = "Available Tables"
 	list.SetShowStatusBar(false)
 	list.SetFilteringEnabled(false)
@@ -89,12 +91,12 @@ func (tlv TablesListView) Update(msg tea.Msg) (TablesListView, tea.Cmd) {
 	return tlv, nil
 }
 
-// TODO constants
-var baseStyle = lipgloss.NewStyle().
-	BorderStyle(lipgloss.NormalBorder()).
-	BorderForeground(lipgloss.Color("black"))
-
 func (tlv TablesListView) View() string {
-	return baseStyle.Render(tlv.list.View()) + "\n"
-	// return tlv.list.View()
+	var box RenderFunc
+	if tlv.Active {
+		box = Styles.BoxActive
+	} else {
+		box = Styles.BoxInactive
+	}
+	return box(tlv.list.View())
 }

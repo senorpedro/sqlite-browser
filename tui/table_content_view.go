@@ -6,7 +6,8 @@ import (
 )
 
 type TableContentView struct {
-	table table.Model
+	Active bool
+	table  table.Model
 }
 
 // Define a message that represents a request to render the table
@@ -21,7 +22,14 @@ func (v TableContentView) Update(msg tea.Msg) (TableContentView, tea.Cmd) {
 }
 
 func (v TableContentView) View() string {
-	return v.table.View()
+	var box RenderFunc
+	if v.Active {
+		box = Styles.BoxActive
+	} else {
+		box = Styles.BoxInactive
+	}
+	return box(v.table.View())
+
 }
 
 func CreateTablesContentView(columnNames []string, data [][]string) TableContentView {
@@ -58,6 +66,7 @@ func CreateTablesContentView(columnNames []string, data [][]string) TableContent
 	)
 
 	v := TableContentView{table: t}
+
 	return v
 
 }
