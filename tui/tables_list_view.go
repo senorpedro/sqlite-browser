@@ -88,7 +88,9 @@ func (tlv TablesListView) Init() tea.Cmd {
 }
 
 func (tlv TablesListView) Update(msg tea.Msg) (TablesListView, tea.Cmd) {
-	return tlv, nil
+	var cmd tea.Cmd
+	tlv.list, cmd = tlv.list.Update(msg)
+	return tlv, cmd
 }
 
 func (tlv TablesListView) View() string {

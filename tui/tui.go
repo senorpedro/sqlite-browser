@@ -4,15 +4,26 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"senorpedro.com/sqlite-browser/db"
 )
 
+func (t Tui) getActiveView() string {
+	if t.tableContentView.Active {
+		return "content"
+	} else {
+		return "list"
+	}
+}
+
 type Tui struct {
 	SqliteReader     *db.SqliteReader
 	tablesListView   TablesListView
 	tableContentView TableContentView
+	help             help.Model
 }
 
 func (t Tui) Init() tea.Cmd {
@@ -24,10 +35,10 @@ func (t Tui) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "q", "ctrl+c":
+		switch {
+		case key.Matches(msg, Keys.Quit):
 			return t, tea.Quit
-		case "tab":
+		case key.Matches(msg, Keys.Tab):
 			// switch focus to other pane
 			if t.tableContentView.Active {
 				t.tableContentView.Active = false
@@ -36,29 +47,40 @@ func (t Tui) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				t.tableContentView.Active = true
 				t.tablesListView.Active = false
 			}
-		case "enter":
-			// Load file contents into the contentList
+		case key.Matches(msg, Keys.Down):
+			active := t.getActiveView()
+			if active == "content" {
+				t.tableContentView, cmd = t.tableContentView.Update(msg)
+			} else {
+				t.tablesListView, cmd = t.tablesListView.Update(msg)
+			}
+		case key.Matches(msg, Keys.Up):
+			active := t.getActiveView()
+			if active == "content" {
+				t.tableContentView, cmd = t.tableContentView.Update(msg)
+			} else {
+				t.tablesListView, cmd = t.tablesListView.Update(msg)
+			}
+
+		case key.Matches(msg, Keys.Help):
+			t.help.ShowAll = !t.help.ShowAll
 			/*
-				selected := m.files[m.fileList.SelectedIndex()]
-				if !selected.IsDir() {
-					content, err := ioutil.ReadFile(selected.Name())
-					if err != nil {
-						m.contentList = list.NewModel([]string{"Error reading file"}, false)
-					} else {
-						m.contentList = list.NewModel(strings.Split(string(content), "\n"), false)
-					}
-				}
+				case "enter":
+					// Load file contents into the contentList
+						selected := m.files[m.fileList.SelectedIndex()]
+						if !selected.IsDir() {
+							content, err := ioutil.ReadFile(selected.Name())
+							if err != nil {
+								m.contentList = list.NewModel([]string{"Error reading file"}, false)
+							} else {
+								m.contentList = list.NewModel(strings.Split(string(content), "\n"), false)
+							}
+						}
 			*/
-		default:
-			t.tablesListView, cmd = t.tablesListView.Update(msg)
 		}
 	}
 
 	return t, cmd
-}
-
-func help() string {
-	return Styles.Help(fmt.Sprintf("\ntab: focus next • q: exit\n"))
 }
 
 func (t Tui) View() string {
@@ -73,7 +95,7 @@ func (t Tui) View() string {
 	// Combine the panes horizontally
 	view := lipgloss.JoinHorizontal(lipgloss.Top, leftPane, rightPane)
 
-	view += help()
+	view += Styles.Help(t.help.View(Keys))
 
 	return view
 }
@@ -85,9 +107,9 @@ func StartUI(s *db.SqliteReader) {
 	tableNames := tui.SqliteReader.TableNames()
 
 	// init ui
-	tlv := CreateTablesListView(tableNames)
-	tlv.Active = true
-	tui.tablesListView = tlv
+	tablesListView := CreateTablesListView(tableNames)
+	tablesListView.Active = true
+	tui.tablesListView = tablesListView
 
 	// TODO replace with real data
 	header := []string{"Name", "Age", "Gender"}
@@ -98,9 +120,11 @@ func StartUI(s *db.SqliteReader) {
 		{"Diana", "35", "Female"},
 	}
 
-	tcv := CreateTablesContentView(header, data)
-	tcv.Active = false
-	tui.tableContentView = tcv
+	tableContentView := CreateTablesContentView(header, data)
+	tableContentView.Active = false
+	tui.tableContentView = tableContentView
+
+	tui.help = help.New()
 
 	if _, err := tea.NewProgram(tui, tea.WithAltScreen()).Run(); err != nil {
 		fmt.Println("Error running program:", err)
