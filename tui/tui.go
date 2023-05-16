@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"senorpedro.com/sqlite-browser/db"
+	"senorpedro.com/sqlite-browser/debug"
 )
 
 func (t Tui) getActiveView() string {
@@ -34,6 +35,17 @@ func (t Tui) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		debug.Log(msg.Height)
+		/*
+			t.tablesListView.SetHeight(msg.Height)
+			t.tableContentView.SetHeight(msg.Height)
+		*/
+		t.tablesListView.Update(msg)
+		t.tableContentView.Update(msg)
+
+		return t, nil
+
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, Keys.Quit):

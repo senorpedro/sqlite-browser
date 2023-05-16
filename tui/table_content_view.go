@@ -18,7 +18,16 @@ func (v TableContentView) Init() tea.Cmd {
 }
 
 func (v TableContentView) Update(msg tea.Msg) (TableContentView, tea.Cmd) {
+	/*
+		debug.Log("TableContentView, Update")
+		table, cmd := v.table.Update(msg)
+		v.table = table
+	*/
 	return v, nil
+}
+
+func (v TableContentView) SetHeight(h int) {
+	v.table.SetHeight(h)
 }
 
 func (v TableContentView) View() string {

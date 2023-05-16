@@ -52,7 +52,14 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, currentListIt
 type TablesListView struct { // bubbletea model
 	list   list.Model
 	Active bool
+	height int
 }
+
+/*
+func (tlv TablesListView) SetHeight(h int) {
+	tlv.list.SetHeight(h)
+}
+*/
 
 func CreateTablesListView(tableNames []string) TablesListView {
 
@@ -62,13 +69,9 @@ func CreateTablesListView(tableNames []string) TablesListView {
 		tableItems[i] = list.Item(listItem(table))
 	}
 
-	// TODO constants
-	defaultWidth := 30
-	listHeight := 14
-
-	list := list.NewModel(tableItems, itemDelegate{}, defaultWidth, listHeight)
-	list.SetShowHelp(false)
+	list := list.New(tableItems, itemDelegate{}, TablesListWidth, 20)
 	list.Title = "Available Tables"
+	list.SetShowHelp(false)
 	list.SetShowStatusBar(false)
 	list.SetFilteringEnabled(false)
 	/*
@@ -89,7 +92,15 @@ func (tlv TablesListView) Init() tea.Cmd {
 
 func (tlv TablesListView) Update(msg tea.Msg) (TablesListView, tea.Cmd) {
 	var cmd tea.Cmd
-	tlv.list, cmd = tlv.list.Update(msg)
+
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		// tlv.list, cmd = tlv.list.Update(msg)
+		tlv.list.SetHeight(msg.Height)
+	default:
+		tlv.list, cmd = tlv.list.Update(msg)
+	}
+
 	return tlv, cmd
 }
 

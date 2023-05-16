@@ -2,6 +2,8 @@ package tui
 
 import "github.com/charmbracelet/lipgloss"
 
+var TablesListWidth = 30
+
 // ATM only for light background!
 // TODO define colors for dark background as well!
 type colors struct {
