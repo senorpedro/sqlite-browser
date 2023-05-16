@@ -51,15 +51,21 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, currentListIt
 
 type TablesListView struct { // bubbletea model
 	list   list.Model
-	Active bool
+	active bool
 	height int
 }
 
-/*
-func (tlv TablesListView) SetHeight(h int) {
-	tlv.list.SetHeight(h)
+func (tlv *TablesListView) SetActive(a bool) {
+	tlv.active = a
 }
-*/
+
+func (tlv TablesListView) Active() bool {
+	return tlv.active
+}
+
+func (tlv *TablesListView) SetHeight(h int) {
+	tlv.list.SetHeight(h + 1)
+}
 
 func CreateTablesListView(tableNames []string) TablesListView {
 
@@ -86,27 +92,29 @@ func CreateTablesListView(tableNames []string) TablesListView {
 	return tlv
 }
 
+func (tlv TablesListView) SelectedTable() string {
+	selectedTable, ok := tlv.list.SelectedItem().(listItem)
+	if ok {
+		return string(selectedTable)
+	}
+	// TODO implement proper handling
+	return ""
+}
+
 func (tlv TablesListView) Init() tea.Cmd {
 	return nil
 }
 
-func (tlv TablesListView) Update(msg tea.Msg) (TablesListView, tea.Cmd) {
+func (tlv *TablesListView) Update(msg tea.Msg) (TablesListView, tea.Cmd) {
 	var cmd tea.Cmd
+	tlv.list, cmd = tlv.list.Update(msg)
 
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		// tlv.list, cmd = tlv.list.Update(msg)
-		tlv.list.SetHeight(msg.Height)
-	default:
-		tlv.list, cmd = tlv.list.Update(msg)
-	}
-
-	return tlv, cmd
+	return *tlv, cmd
 }
 
 func (tlv TablesListView) View() string {
 	var box RenderFunc
-	if tlv.Active {
+	if tlv.active {
 		box = Styles.BoxActive
 	} else {
 		box = Styles.BoxInactive

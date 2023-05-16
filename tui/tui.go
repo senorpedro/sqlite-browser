@@ -9,11 +9,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"senorpedro.com/sqlite-browser/db"
-	"senorpedro.com/sqlite-browser/debug"
 )
 
 func (t Tui) getActiveView() string {
-	if t.tableContentView.Active {
+	if t.tableContentView.Active() {
 		return "content"
 	} else {
 		return "list"
@@ -36,13 +35,12 @@ func (t Tui) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		debug.Log(msg.Height)
-		/*
-			t.tablesListView.SetHeight(msg.Height)
-			t.tableContentView.SetHeight(msg.Height)
-		*/
-		t.tablesListView.Update(msg)
-		t.tableContentView.Update(msg)
+		height := msg.Height - HelpHeight
+		t.tablesListView.SetHeight(height)
+		t.tableContentView.SetHeight(height)
+
+		width := msg.Width - TablesListWidth
+		t.tableContentView.SetWidth(width)
 
 		return t, nil
 
@@ -52,12 +50,12 @@ func (t Tui) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return t, tea.Quit
 		case key.Matches(msg, Keys.Tab):
 			// switch focus to other pane
-			if t.tableContentView.Active {
-				t.tableContentView.Active = false
-				t.tablesListView.Active = true
+			if t.tableContentView.Active() {
+				t.tableContentView.SetActive(false)
+				t.tablesListView.SetActive(true)
 			} else {
-				t.tableContentView.Active = true
-				t.tablesListView.Active = false
+				t.tableContentView.SetActive(true)
+				t.tablesListView.SetActive(false)
 			}
 		case key.Matches(msg, Keys.Down):
 			active := t.getActiveView()
@@ -65,6 +63,7 @@ func (t Tui) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				t.tableContentView, cmd = t.tableContentView.Update(msg)
 			} else {
 				t.tablesListView, cmd = t.tablesListView.Update(msg)
+				t.LoadSelectedTable()
 			}
 		case key.Matches(msg, Keys.Up):
 			active := t.getActiveView()
@@ -72,6 +71,7 @@ func (t Tui) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				t.tableContentView, cmd = t.tableContentView.Update(msg)
 			} else {
 				t.tablesListView, cmd = t.tablesListView.Update(msg)
+				t.LoadSelectedTable()
 			}
 
 		case key.Matches(msg, Keys.Help):
@@ -112,6 +112,11 @@ func (t Tui) View() string {
 	return view
 }
 
+func (t *Tui) LoadSelectedTable() {
+	selectedTable := t.tablesListView.SelectedTable()
+	t.tableContentView.Load(selectedTable)
+}
+
 func StartUI(s *db.SqliteReader) {
 
 	tui := Tui{SqliteReader: s}
@@ -120,21 +125,14 @@ func StartUI(s *db.SqliteReader) {
 
 	// init ui
 	tablesListView := CreateTablesListView(tableNames)
-	tablesListView.Active = true
+	tablesListView.SetActive(true)
 	tui.tablesListView = tablesListView
 
-	// TODO replace with real data
-	header := []string{"Name", "Age", "Gender"}
-	data := [][]string{
-		{"Alice", "25", "Female"},
-		{"Bob", "30", "Male"},
-		{"Charlie", "40", "Male"},
-		{"Diana", "35", "Female"},
-	}
-
-	tableContentView := CreateTablesContentView(header, data)
-	tableContentView.Active = false
+	tableContentView := CreateTablesContentView(s)
+	tableContentView.SetActive(false)
 	tui.tableContentView = tableContentView
+
+	tui.LoadSelectedTable()
 
 	tui.help = help.New()
 

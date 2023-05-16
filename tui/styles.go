@@ -2,7 +2,10 @@ package tui
 
 import "github.com/charmbracelet/lipgloss"
 
-var TablesListWidth = 30
+var (
+	TablesListWidth = 30
+	HelpHeight      = 5
+)
 
 // ATM only for light background!
 // TODO define colors for dark background as well!

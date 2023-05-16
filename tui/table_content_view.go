@@ -3,11 +3,14 @@ package tui
 import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
+	"senorpedro.com/sqlite-browser/db"
+	"senorpedro.com/sqlite-browser/debug"
 )
 
 type TableContentView struct {
-	Active bool
-	table  table.Model
+	sqliteReader *db.SqliteReader
+	active       bool
+	table        table.Model
 }
 
 // Define a message that represents a request to render the table
@@ -18,30 +21,61 @@ func (v TableContentView) Init() tea.Cmd {
 }
 
 func (v TableContentView) Update(msg tea.Msg) (TableContentView, tea.Cmd) {
-	/*
-		debug.Log("TableContentView, Update")
-		table, cmd := v.table.Update(msg)
-		v.table = table
-	*/
-	return v, nil
+	var cmd tea.Cmd
+	v.table, cmd = v.table.Update(msg)
+	return v, cmd
 }
 
-func (v TableContentView) SetHeight(h int) {
+func (v *TableContentView) SetActive(a bool) {
+	if a {
+		v.table.Focus()
+	} else {
+		v.table.Blur()
+	}
+	v.active = a
+}
+
+func (v TableContentView) Active() bool {
+	return v.active
+}
+
+func (v *TableContentView) SetHeight(h int) {
 	v.table.SetHeight(h)
+}
+
+func (v *TableContentView) SetWidth(w int) {
+	v.table.SetWidth(w)
+}
+
+func (v *TableContentView) Load(table string) {
+	debug.Log("loading table %s", table)
+
 }
 
 func (v TableContentView) View() string {
 	var box RenderFunc
-	if v.Active {
+	if v.active {
 		box = Styles.BoxActive
 	} else {
 		box = Styles.BoxInactive
 	}
+
+	debug.Log("width = %s", v.table.Width())
+
 	return box(v.table.View())
 
 }
 
-func CreateTablesContentView(columnNames []string, data [][]string) TableContentView {
+func CreateTablesContentView(s *db.SqliteReader) TableContentView {
+
+	// TODO replace with real data
+	columnNames := []string{"Name", "Age", "Gender"}
+	data := [][]string{
+		{"Alice", "25", "Female"},
+		{"Bob", "30", "Male"},
+		{"Charlie", "40", "Male"},
+		{"Diana", "35", "Female"},
+	}
 
 	columns := make([]table.Column, len(columnNames))
 
@@ -55,18 +89,6 @@ func CreateTablesContentView(columnNames []string, data [][]string) TableContent
 		rows[i] = row
 	}
 
-	/*
-		initialModel := table{
-			header: []string{"Name", "Age", "Gender"},
-			data: [][]string{
-				{"Alice", "25", "Female"},
-				{"Bob", "30", "Male"},
-				{"Charlie", "40", "Male"},
-				{"Diana", "35", "Female"},
-			},
-		}
-	*/
-
 	t := table.New(
 		table.WithColumns(columns),
 		table.WithRows(rows),
@@ -74,7 +96,7 @@ func CreateTablesContentView(columnNames []string, data [][]string) TableContent
 		table.WithHeight(7),
 	)
 
-	v := TableContentView{table: t}
+	v := TableContentView{table: t, sqliteReader: s}
 
 	return v
 
