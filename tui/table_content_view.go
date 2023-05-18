@@ -1,10 +1,11 @@
 package tui
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"senorpedro.com/sqlite-browser/db"
-	"senorpedro.com/sqlite-browser/debug"
 )
 
 type TableContentView struct {
@@ -47,9 +48,33 @@ func (v *TableContentView) SetWidth(w int) {
 	v.table.SetWidth(w)
 }
 
-func (v *TableContentView) Load(table string) {
-	debug.Log("loading table %s", table)
+func (v *TableContentView) Load(tableName string) {
+	columnInfo := v.sqliteReader.TableInfo(tableName)
 
+	columns := make([]table.Column, len(columnInfo))
+	columnIdxMap := make(map[string]int)
+
+	for i, column := range columnInfo {
+		columns[i] = table.Column{Title: column.Name, Width: 20}
+		columnIdxMap[column.Name] = i
+	}
+
+	tableData := v.sqliteReader.TableContent(tableName)
+
+	rows := make([]table.Row, len(tableData))
+
+	for idx, tableRow := range tableData {
+		rows[idx] = make(table.Row, len(tableRow))
+
+		for columnName, value := range tableRow {
+			columnIdx := columnIdxMap[columnName]
+
+			rows[idx][columnIdx] = fmt.Sprintf("%v", value)
+		}
+	}
+
+	v.table.SetColumns(columns)
+	v.table.SetRows(rows)
 }
 
 func (v TableContentView) View() string {
@@ -60,38 +85,39 @@ func (v TableContentView) View() string {
 		box = Styles.BoxInactive
 	}
 
-	debug.Log("width = %s", v.table.Width())
-
 	return box(v.table.View())
-
 }
 
 func CreateTablesContentView(s *db.SqliteReader) TableContentView {
 
-	// TODO replace with real data
-	columnNames := []string{"Name", "Age", "Gender"}
-	data := [][]string{
-		{"Alice", "25", "Female"},
-		{"Bob", "30", "Male"},
-		{"Charlie", "40", "Male"},
-		{"Diana", "35", "Female"},
-	}
+	/*
+		// TODO replace with real data
+		columnNames := []string{"Name", "Age", "Gender"}
+		data := [][]string{
+			{"Alice", "25", "Female"},
+			{"Bob", "30", "Male"},
+			{"Charlie", "40", "Male"},
+			{"Diana", "35", "Female"},
+		}
 
-	columns := make([]table.Column, len(columnNames))
+		columns := make([]table.Column, len(columnNames))
 
-	for i, column := range columnNames {
-		columns[i] = table.Column{Title: column, Width: 20}
-	}
+		for i, column := range columnNames {
+			columns[i] = table.Column{Title: column, Width: 20}
+		}
 
-	rows := make([]table.Row, len(data))
+		rows := make([]table.Row, len(data))
 
-	for i, row := range data {
-		rows[i] = row
-	}
+		for i, row := range data {
+			rows[i] = row
+		}
+	*/
 
 	t := table.New(
-		table.WithColumns(columns),
-		table.WithRows(rows),
+		/*
+			table.WithColumns(columns),
+			table.WithRows(rows),
+		*/
 		table.WithFocused(true),
 		table.WithHeight(7),
 	)

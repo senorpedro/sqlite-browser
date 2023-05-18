@@ -1,20 +1,49 @@
 package db
 
 import (
+	"fmt"
 	"log"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
-type Table struct {
+type SqliteReader struct {
+	db         *gorm.DB
+	tables     []*table
+	tableNames []string
+}
+
+type table struct {
 	Name string
 }
 
-type SqliteReader struct {
-	DB         *gorm.DB
-	tables     []*Table
-	tableNames []string
+type ColumnInfo struct {
+	Cid     int
+	Name    string
+	Type    string
+	NotNull int
+	// DefaultValue interface{} ????
+	PK int
+}
+
+func (s *SqliteReader) TableInfo(table string) []ColumnInfo {
+	var columns []ColumnInfo
+	// TODO fix possible SqlInjection
+	s.db.Raw(fmt.Sprintf("PRAGMA table_info(%s)", table)).Scan(&columns)
+
+	return columns
+}
+
+func (s *SqliteReader) TableContent(table string) []map[string]interface{} {
+
+	var results []map[string]interface{}
+	err := s.db.Raw(fmt.Sprintf("SELECT * FROM %s", table)).Scan(&results).Error
+	if err != nil {
+		panic(err)
+	}
+
+	return results
 }
 
 func (s *SqliteReader) Open(fileName string) {
@@ -23,12 +52,11 @@ func (s *SqliteReader) Open(fileName string) {
 		log.Fatalf("unable to open database: %v", err)
 	}
 
-	s.DB = db
+	s.db = db
 }
 
 func (s *SqliteReader) readTables() {
-
-	s.DB.Raw(`
+	s.db.Raw(`
 	SELECT name FROM sqlite_schema
 	WHERE 
 		type ='table' 
