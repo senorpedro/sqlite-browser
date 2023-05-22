@@ -49,6 +49,7 @@ func (v *TableContentView) SetWidth(w int) {
 }
 
 func (v *TableContentView) Load(tableName string) {
+	v.NewTable()
 	columnInfo := v.sqliteReader.TableInfo(tableName)
 
 	columns := make([]table.Column, len(columnInfo))
@@ -88,41 +89,18 @@ func (v TableContentView) View() string {
 	return box(v.table.View())
 }
 
-func CreateTablesContentView(s *db.SqliteReader) TableContentView {
+func (v *TableContentView) NewTable() {
 
-	/*
-		// TODO replace with real data
-		columnNames := []string{"Name", "Age", "Gender"}
-		data := [][]string{
-			{"Alice", "25", "Female"},
-			{"Bob", "30", "Male"},
-			{"Charlie", "40", "Male"},
-			{"Diana", "35", "Female"},
-		}
-
-		columns := make([]table.Column, len(columnNames))
-
-		for i, column := range columnNames {
-			columns[i] = table.Column{Title: column, Width: 20}
-		}
-
-		rows := make([]table.Row, len(data))
-
-		for i, row := range data {
-			rows[i] = row
-		}
-	*/
-
-	t := table.New(
-		/*
-			table.WithColumns(columns),
-			table.WithRows(rows),
-		*/
+	v.table = table.New(
 		table.WithFocused(true),
 		table.WithHeight(7),
 	)
+}
 
-	v := TableContentView{table: t, sqliteReader: s}
+func CreateTablesContentView(s *db.SqliteReader) TableContentView {
+
+	v := TableContentView{sqliteReader: s}
+	v.NewTable()
 
 	return v
 
