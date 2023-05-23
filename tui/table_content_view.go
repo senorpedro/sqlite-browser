@@ -8,7 +8,7 @@ import (
 	"senorpedro.com/sqlite-browser/db"
 )
 
-type TableContentView struct {
+type TableContentModel struct {
 	sqliteReader *db.SqliteReader
 	active       bool
 	table        table.Model
@@ -17,40 +17,40 @@ type TableContentView struct {
 // Define a message that represents a request to render the table
 type renderTableMsg struct{}
 
-func (v TableContentView) Init() tea.Cmd {
+func (model TableContentModel) Init() tea.Cmd {
 	return nil
 }
 
-func (v TableContentView) Update(msg tea.Msg) (TableContentView, tea.Cmd) {
+func (model TableContentModel) Update(msg tea.Msg) (TableContentModel, tea.Cmd) {
 	var cmd tea.Cmd
-	v.table, cmd = v.table.Update(msg)
-	return v, cmd
+	model.table, cmd = model.table.Update(msg)
+	return model, cmd
 }
 
-func (v *TableContentView) SetActive(a bool) {
+func (model *TableContentModel) SetActive(a bool) {
 	if a {
-		v.table.Focus()
+		model.table.Focus()
 	} else {
-		v.table.Blur()
+		model.table.Blur()
 	}
-	v.active = a
+	model.active = a
 }
 
-func (v TableContentView) Active() bool {
-	return v.active
+func (model TableContentModel) Active() bool {
+	return model.active
 }
 
-func (v *TableContentView) SetHeight(h int) {
-	v.table.SetHeight(h)
+func (model *TableContentModel) SetHeight(h int) {
+	model.table.SetHeight(h)
 }
 
-func (v *TableContentView) SetWidth(w int) {
-	v.table.SetWidth(w)
+func (model *TableContentModel) SetWidth(w int) {
+	model.table.SetWidth(w)
 }
 
-func (v *TableContentView) Load(tableName string) {
-	v.NewTable()
-	columnInfo := v.sqliteReader.TableInfo(tableName)
+func (model *TableContentModel) Load(tableName string) {
+	model.NewTable()
+	columnInfo := model.sqliteReader.TableInfo(tableName)
 
 	columns := make([]table.Column, len(columnInfo))
 	columnIdxMap := make(map[string]int)
@@ -60,7 +60,7 @@ func (v *TableContentView) Load(tableName string) {
 		columnIdxMap[column.Name] = i
 	}
 
-	tableData := v.sqliteReader.TableContent(tableName)
+	tableData := model.sqliteReader.TableContent(tableName)
 
 	rows := make([]table.Row, len(tableData))
 
@@ -74,36 +74,35 @@ func (v *TableContentView) Load(tableName string) {
 		}
 	}
 
-	v.table.SetColumns(columns)
-	v.table.SetRows(rows)
+	model.table.SetColumns(columns)
+	model.table.SetRows(rows)
 }
 
-func (v TableContentView) View() string {
+func (model TableContentModel) View() string {
 	var box RenderFunc
-	if v.active {
+	if model.active {
 		box = Styles.BoxActive
 	} else {
 		box = Styles.BoxInactive
 	}
 
-	return box(v.table.View())
+	return box(model.table.View())
 }
 
-func (v *TableContentView) NewTable() {
+func (model *TableContentModel) NewTable() {
 
-	v.table = table.New(
+	model.table = table.New(
 		table.WithFocused(true),
 		table.WithHeight(7),
 	)
 }
 
-func CreateTablesContentView(s *db.SqliteReader) TableContentView {
+func CreateTableContentModel(s *db.SqliteReader) TableContentModel {
 
-	v := TableContentView{sqliteReader: s}
-	v.NewTable()
+	model := TableContentModel{sqliteReader: s}
+	model.NewTable()
 
-	return v
-
+	return model
 }
 
 //func (t table) Init() tea.Cmd {

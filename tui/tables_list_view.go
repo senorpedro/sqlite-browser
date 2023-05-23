@@ -49,25 +49,25 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, currentListIt
 	fmt.Fprint(w, fn(str))
 }
 
-type TablesListView struct { // bubbletea model
+type TablesListModel struct { // bubbletea model
 	list   list.Model
 	active bool
 	height int
 }
 
-func (tlv *TablesListView) SetActive(a bool) {
-	tlv.active = a
+func (model *TablesListModel) SetActive(a bool) {
+	model.active = a
 }
 
-func (tlv TablesListView) Active() bool {
-	return tlv.active
+func (model TablesListModel) Active() bool {
+	return model.active
 }
 
-func (tlv *TablesListView) SetHeight(h int) {
-	tlv.list.SetHeight(h + 1)
+func (model *TablesListModel) SetHeight(h int) {
+	model.list.SetHeight(h + 1)
 }
 
-func CreateTablesListView(tableNames []string) TablesListView {
+func CreateTablesListModel(tableNames []string) TablesListModel {
 
 	tableItems := make([]list.Item, len(tableNames))
 
@@ -86,14 +86,14 @@ func CreateTablesListView(tableNames []string) TablesListView {
 		list.Styles.HelpStyle = helpStyle
 	*/
 
-	tlv := TablesListView{
+	model := TablesListModel{
 		list: list,
 	}
-	return tlv
+	return model
 }
 
-func (tlv TablesListView) SelectedTable() string {
-	selectedTable, ok := tlv.list.SelectedItem().(listItem)
+func (model TablesListModel) SelectedTable() string {
+	selectedTable, ok := model.list.SelectedItem().(listItem)
 	if ok {
 		return string(selectedTable)
 	}
@@ -101,23 +101,23 @@ func (tlv TablesListView) SelectedTable() string {
 	return ""
 }
 
-func (tlv TablesListView) Init() tea.Cmd {
+func (model TablesListModel) Init() tea.Cmd {
 	return nil
 }
 
-func (tlv *TablesListView) Update(msg tea.Msg) (TablesListView, tea.Cmd) {
+func (model TablesListModel) Update(msg tea.Msg) (TablesListModel, tea.Cmd) {
 	var cmd tea.Cmd
-	tlv.list, cmd = tlv.list.Update(msg)
+	model.list, cmd = model.list.Update(msg)
 
-	return *tlv, cmd
+	return model, cmd
 }
 
-func (tlv TablesListView) View() string {
+func (model TablesListModel) View() string {
 	var box RenderFunc
-	if tlv.active {
+	if model.active {
 		box = Styles.BoxActive
 	} else {
 		box = Styles.BoxInactive
 	}
-	return box(tlv.list.View())
+	return box(model.list.View())
 }

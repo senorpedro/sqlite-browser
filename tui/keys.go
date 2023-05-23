@@ -8,12 +8,13 @@ type keyMap struct {
 	Help key.Binding
 	Quit key.Binding
 	Tab  key.Binding
+	T    key.Binding
 }
 
 // ShortHelp returns keybindings to be shown in the mini help view. It's part
 // of the key.Map interface.
 func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Tab, k.Up, k.Down, k.Help, k.Quit}
+	return []key.Binding{k.Tab, k.Up, k.Down, k.Help, k.T, k.Quit}
 }
 
 // FullHelp returns keybindings for the expanded help view. It's part of the
@@ -21,7 +22,7 @@ func (k keyMap) ShortHelp() []key.Binding {
 func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Tab, k.Up, k.Down}, // first column
-		{k.Help, k.Quit},      // second column
+		{k.T, k.Help, k.Quit}, // second column
 	}
 }
 
@@ -45,5 +46,9 @@ var Keys = keyMap{
 	Quit: key.NewBinding(
 		key.WithKeys("q", "esc", "ctrl+c"),
 		key.WithHelp("q", "quit"),
+	),
+	T: key.NewBinding(
+		key.WithKeys("t"),
+		key.WithHelp("t", "toggle table list"),
 	),
 }

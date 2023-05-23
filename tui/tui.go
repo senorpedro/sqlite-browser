@@ -11,71 +11,85 @@ import (
 	"senorpedro.com/sqlite-browser/db"
 )
 
-func (t Tui) getActiveView() string {
-	if t.tableContentView.Active() {
+type TuiModel struct {
+	SqliteReader *db.SqliteReader
+	tablesList   TablesListModel
+	tableContent TableContentModel
+	help         help.Model
+	listVisible  bool
+}
+
+func (model TuiModel) getActiveModel() string {
+	if model.tableContent.Active() {
 		return "content"
-	} else {
-		return "list"
 	}
+
+	return "list"
 }
 
-type Tui struct {
-	SqliteReader     *db.SqliteReader
-	tablesListView   TablesListView
-	tableContentView TableContentView
-	help             help.Model
-}
-
-func (t Tui) Init() tea.Cmd {
+func (model TuiModel) Init() tea.Cmd {
 	return nil
 }
 
-func (t Tui) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (model TuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		height := msg.Height - HelpHeight
-		t.tablesListView.SetHeight(height)
-		t.tableContentView.SetHeight(height)
+		model.tablesList.SetHeight(height)
+		model.tableContent.SetHeight(height)
 
-		width := msg.Width - TablesListWidth
-		t.tableContentView.SetWidth(width)
+		width := msg.Width
+		if model.listVisible {
+			width -= TablesListWidth
+		}
 
-		return t, nil
+		model.tableContent.SetWidth(width)
+
+		return model, nil
 
 	case tea.KeyMsg:
 		switch {
+		case key.Matches(msg, Keys.T):
+			model.listVisible = !model.listVisible
+			if !model.listVisible {
+				model.tableContent.SetActive(true)
+				model.tablesList.SetActive(false)
+			}
+
 		case key.Matches(msg, Keys.Quit):
-			return t, tea.Quit
+			return model, tea.Quit
 		case key.Matches(msg, Keys.Tab):
-			// switch focus to other pane
-			if t.tableContentView.Active() {
-				t.tableContentView.SetActive(false)
-				t.tablesListView.SetActive(true)
-			} else {
-				t.tableContentView.SetActive(true)
-				t.tablesListView.SetActive(false)
+			if model.listVisible {
+				// switch focus to other pane
+				if model.tableContent.Active() {
+					model.tableContent.SetActive(false)
+					model.tablesList.SetActive(true)
+				} else {
+					model.tableContent.SetActive(true)
+					model.tablesList.SetActive(false)
+				}
 			}
 		case key.Matches(msg, Keys.Down):
-			active := t.getActiveView()
+			active := model.getActiveModel()
 			if active == "content" {
-				t.tableContentView, cmd = t.tableContentView.Update(msg)
+				model.tableContent, cmd = model.tableContent.Update(msg)
 			} else {
-				t.tablesListView, cmd = t.tablesListView.Update(msg)
-				t.LoadSelectedTable()
+				model.tablesList, cmd = model.tablesList.Update(msg)
+				model.LoadSelectedTable()
 			}
 		case key.Matches(msg, Keys.Up):
-			active := t.getActiveView()
+			active := model.getActiveModel()
 			if active == "content" {
-				t.tableContentView, cmd = t.tableContentView.Update(msg)
+				model.tableContent, cmd = model.tableContent.Update(msg)
 			} else {
-				t.tablesListView, cmd = t.tablesListView.Update(msg)
-				t.LoadSelectedTable()
+				model.tablesList, cmd = model.tablesList.Update(msg)
+				model.LoadSelectedTable()
 			}
 
 		case key.Matches(msg, Keys.Help):
-			t.help.ShowAll = !t.help.ShowAll
+			model.help.ShowAll = !model.help.ShowAll
 			/*
 				case "enter":
 					// Load file contents into the contentList
@@ -92,49 +106,60 @@ func (t Tui) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	return t, cmd
+	return model, cmd
 }
 
-func (t Tui) View() string {
-	tablesListView := t.tablesListView.View()
-	tableContentView := t.tableContentView.View()
+func (model TuiModel) View() string {
 
-	// Style the two panes
-	leftPane := lipgloss.NewStyle().Render(tablesListView)
-	// leftPane := lipgloss.NewStyle().Width(30).Height(100).Render(tablesListView)
-	rightPane := lipgloss.NewStyle().Render(tableContentView)
+	tableContentView := model.tableContent.View()
+	var view string
 
-	// Combine the panes horizontally
-	view := lipgloss.JoinHorizontal(lipgloss.Top, leftPane, rightPane)
+	if model.listVisible {
 
-	view += Styles.Help(t.help.View(Keys))
+		tablesListView := model.tablesList.View()
+
+		// Style the two panes
+		leftPane := lipgloss.NewStyle().Render(tablesListView)
+		// leftPane := lipgloss.NewStyle().Width(30).Height(100).Render(tablesListView)
+		rightPane := lipgloss.NewStyle().Render(tableContentView)
+
+		// Combine the panes horizontally
+		view = lipgloss.JoinHorizontal(lipgloss.Top, leftPane, rightPane)
+
+	} else {
+		view = tableContentView
+	}
+
+	view += Styles.Help(model.help.View(Keys))
 
 	return view
 }
 
-func (t *Tui) LoadSelectedTable() {
-	selectedTable := t.tablesListView.SelectedTable()
-	t.tableContentView.Load(selectedTable)
+func (model *TuiModel) LoadSelectedTable() {
+	selectedTable := model.tablesList.SelectedTable()
+	model.tableContent.Load(selectedTable)
 }
 
 func StartUI(s *db.SqliteReader) {
 
-	tui := Tui{SqliteReader: s}
-
-	tableNames := tui.SqliteReader.TableNames()
+	tableNames := s.TableNames()
 
 	// init ui
-	tablesListView := CreateTablesListView(tableNames)
-	tablesListView.SetActive(true)
-	tui.tablesListView = tablesListView
+	tablesList := CreateTablesListModel(tableNames)
+	tablesList.SetActive(true)
 
-	tableContentView := CreateTablesContentView(s)
-	tableContentView.SetActive(false)
-	tui.tableContentView = tableContentView
+	tableContent := CreateTableContentModel(s)
+	tableContent.SetActive(false)
+
+	tui := TuiModel{
+		SqliteReader: s,
+		listVisible:  true,
+		help:         help.New(),
+		tablesList:   tablesList,
+		tableContent: tableContent,
+	}
 
 	tui.LoadSelectedTable()
-
-	tui.help = help.New()
 
 	if _, err := tea.NewProgram(tui, tea.WithAltScreen()).Run(); err != nil {
 		fmt.Println("Error running program:", err)
